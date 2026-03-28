@@ -24,6 +24,7 @@ STEPS = [
     ("step_01_sixmonth_rollover_analysis.py", "6-Month Rollover Analysis"),
     ("step_02_cleanup_previous_cm.py", "Clean Previous Month CM Data"),
     ("step_03_latest_rollover_analysis.py", "Latest Month Rollover Analysis"),
+    ("step_04a_extract_latest_cm_index.py", "Extract Latest Month Index"),
     ("step_04_cleanup_latest_cm.py", "Clean Latest Month CM Data"),
     ("step_05_merge_all_data.py", "Merge All FO & CM Data"),
     ("step_06_build_sector_layout.py", "Build Sector Layout"),
@@ -93,7 +94,10 @@ def main():
     logger.info("📊 PIPELINE SUMMARY")
     logger.info("="*60)
     logger.info(f"✅ Successful: {successful}/{len(STEPS)}")
-    logger.info(f"❌ Failed: {failed}/{len(STEPS)}")
+    if failed == 0:
+        logger.info("🎯 No failures detected")
+    else:
+        logger.error(f"❌ Failed: {failed}/{len(STEPS)}")
     
     if failed == 0:
         logger.info("\n🎉 PIPELINE COMPLETED SUCCESSFULLY!")

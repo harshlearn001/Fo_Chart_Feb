@@ -142,8 +142,15 @@ def extract_trade_date(filename: str, date_format: str = "%d%m%Y") -> pd.Timesta
         Parsed date as pandas Timestamp
     """
     file_stem = Path(filename).stem
-    # Remove prefix (fo/BhavCopy_NSE_CM_etc)
-    date_str = file_stem.replace("fo", "").replace("BhavCopy_NSE_CM_0_0_0_", "").split("_")[0]
+
+    # remove prefixes
+    date_str = (
+        file_stem
+        .replace("fo", "")
+        .replace("BhavCopy_NSE_CM_0_0_0_", "")
+        .split("_")[0]
+    )
+
     return pd.to_datetime(date_str, format=date_format, errors="coerce")
 
 

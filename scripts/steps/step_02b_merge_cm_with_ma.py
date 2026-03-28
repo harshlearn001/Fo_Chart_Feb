@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 
 RAW_DIR = Path(r"H:\Fo_Chart_Feb\data\raw\cm_previous_month")
-INDEX_FILE = Path(r"H:\Fo_Chart_Feb\data\processed\cm\previous_index_from_ma.csv")
+index_file = Path(r"H:\Fo_Chart_Feb\data\processed\cm\previous_cm_index.csv")
 OUT_FILE = Path(r"H:\Fo_Chart_Feb\data\processed\cm\previous_cm_clean.csv")
 
 OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -29,13 +29,14 @@ df = df.rename(columns={
     spot_col: "PREV_SPOT_CLOSE"
 })
 
-if not INDEX_FILE.exists():
-    raise FileNotFoundError("Run step_02a_extract_ma_index.py first")
+# ✅ FIXED HERE
+if not index_file.exists():
+    raise FileNotFoundError("Run step_02a_extract_prev_cm_index.py first")
 
-idx = pd.read_csv(INDEX_FILE)
+idx = pd.read_csv(index_file)
 
 df = pd.concat([df, idx], ignore_index=True)
 df.to_csv(OUT_FILE, index=False)
 
-print("✅ CM + MA index merged")
-print(df[df["SYMBOL"]=="NIFTY"])
+print("✅ CM + INDEX merged")
+print(df[df["SYMBOL"] == "NIFTY"])

@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 """
-STEP 08 FINAL PRO
-Place Stocks into Sectors + Final Excel Output
+STEP 08 FINAL PRO (UPGRADED)
 
-✔ Adds SPOT_CLOSE
-✔ Adds PREV_SPOT_CLOSE
-✔ Shows correct PCT change
-✔ Final trading ready sheet
+✔ Sector validation
+✔ Safe ranking
+✔ Numeric cleanup
+✔ Excel formatted
+✔ Trading-ready output
 """
 
 import sys
@@ -36,53 +36,102 @@ def main():
     logger.info(f"Loaded {len(sector)} sector mappings")
 
     # ======================================================
+    # CLEAN SYMBOL
+    # ======================================================
+    fo["SYMBOL"] = fo["SYMBOL"].astype(str).str.upper().str.strip()
+    sector["SYMBOL"] = sector["SYMBOL"].astype(str).str.upper().str.strip()
+
+    # ======================================================
     # MERGE SECTOR MAP
     # ======================================================
     final = fo.merge(sector, on="SYMBOL", how="left")
 
     # ======================================================
-    # RANK INSIDE SECTOR
+    # CHECK MISSING SECTORS (CRITICAL)
     # ======================================================
-    final["RANK"] = (
-        final.sort_values("DIFF", ascending=False)
-        .groupby("SECTOR")
-        .cumcount() + 1
-    )
+    missing = final[final["SECTOR"].isna()]
+
+    if not missing.empty:
+        logger.warning(f"⚠ Missing sector for {len(missing)} symbols")
+        logger.warning(missing["SYMBOL"].unique()[:10])
+
+        # Optional: mark instead of leaving NaN
+        final["SECTOR"] = final["SECTOR"].fillna("UNKNOWN")
+        final["MACRO_BUCKET"] = final["MACRO_BUCKET"].fillna("UNKNOWN")
 
     # ======================================================
-    # FINAL COLUMN ORDER (ULTRA FINAL)
+    # NUMERIC CLEANUP
+    # ======================================================
+    num_cols = [
+        "SPOT_CLOSE",
+        "PREV_SPOT_CLOSE",
+        "PCT_CHANGE",
+        "FUTURE_PRICE",
+        "BASIS",
+        "ROLLOVER_OI_LATEST",
+        "ROLLOVER_OI_6M_AVG",
+        "ROLLOVER_COST_LATEST",
+        "ROLLOVER_COST_6M_AVG",
+        "DIFF"
+    ]
+
+    for col in num_cols:
+        if col in final.columns:
+            final[col] = pd.to_numeric(final[col], errors="coerce").fillna(0)
+
+    # ======================================================
+    # RANK INSIDE SECTOR (SAFE)
+    # ======================================================
+    final = final.sort_values(["SECTOR", "DIFF"], ascending=[True, False])
+    final["RANK"] = final.groupby("SECTOR").cumcount() + 1
+
+    # ======================================================
+    # FINAL COLUMN ORDER
     # ======================================================
     final = final[[
         "MACRO_BUCKET",
         "SECTOR",
         "SYMBOL",
-
-        # NEW ADDED
         "SPOT_CLOSE",
         "PREV_SPOT_CLOSE",
-
         "PCT_CHANGE",
         "FUTURE_PRICE",
         "BASIS",
-
         "ROLLOVER_OI_LATEST",
         "ROLLOVER_OI_6M_AVG",
         "ROLLOVER_COST_LATEST",
         "ROLLOVER_COST_6M_AVG",
-
         "RANK",
         "DIFF"
     ]]
 
-    final = final.sort_values(["MACRO_BUCKET", "SECTOR", "RANK"])
+    final = final.sort_values(["MACRO_BUCKET", "SECTOR", "RANK"]).reset_index(drop=True)
 
     # ======================================================
-    # SAVE FINAL
+    # SAVE CSV
     # ======================================================
     final.to_csv(OUTPUT_FILES["final_with_sector"], index=False)
 
+    # ======================================================
+    # SAVE EXCEL (FORMATTED)
+    # ======================================================
     excel_path = OUTPUT_FILES["final_with_sector"].with_suffix(".xlsx")
-    final.to_excel(excel_path, index=False)
+
+    with pd.ExcelWriter(excel_path, engine="xlsxwriter") as writer:
+        final.to_excel(writer, sheet_name="Final", index=False)
+
+        ws = writer.sheets["Final"]
+
+        # Freeze header
+        ws.freeze_panes(1, 0)
+
+        # Autofilter
+        ws.autofilter(0, 0, len(final), len(final.columns) - 1)
+
+        # Column width
+        ws.set_column("A:B", 20)
+        ws.set_column("C:C", 15)
+        ws.set_column("D:N", 14)
 
     logger.info("🎉 FINAL SECTOR FILE GENERATED")
     logger.info(f"📁 CSV: {OUTPUT_FILES['final_with_sector']}")

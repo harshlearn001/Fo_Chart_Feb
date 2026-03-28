@@ -276,3 +276,237 @@ Internal use only - Data Analytics Team
 **Last Updated**: February 23, 2026  
 **Status**: Production Ready ✅
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+updated at date28-03-2026
+# FO & Chart Futures Rollover Pipeline - Refactored & Reorganized
+
+## 📂 Project Structure
+
+```
+Fo_Chart_Dece/
+├── .gitignore
+├── requirements.txt
+├── README.md
+│
+└── scripts/
+    ├── __init__.py
+    ├── config.py
+    ├── utils.py
+    ├── run_pipeline.py
+    ├── setup.py
+    ├── README.md
+    │
+    └── steps/
+        ├── __init__.py
+        ├── step_01_sixmonth_rollover_analysis.py
+        ├── step_02_cleanup_previous_cm.py
+        ├── step_03_latest_rollover_analysis.py
+        ├── step_04_cleanup_latest_cm.py
+        ├── step_05_merge_all_data.py
+        ├── step_06_build_sector_layout.py
+        ├── step_07_build_sector_master.py
+        ├── step_08_place_into_sectors.py
+        └── step_09_market_bias_engine.py
+
+data/
+├── raw/
+│   ├── fo_latest_month/
+│   ├── fo_last_sixmonth/
+│   ├── cm_latest_month/
+│   └── cm_previous_month/
+│
+└── processed/
+    ├── latest_month_avg/
+    ├── last_sixmonth_avg/
+    ├── latest_month_cm/
+    ├── previous_month_cm/
+    ├── merged/
+    └── Sector/
+```
+
+## 🎯 Overview
+
+This pipeline analyzes NSE Futures & Options (FO) rollover patterns and cash market (CM) equity spot prices.
+
+It processes raw data through 9 organized steps to produce analysis-ready datasets with sector classification and market direction.
+
+## 🔄 Improvements Made (Version 3.0)
+
+### ✨ Better Organization
+- Core modules (config.py, utils.py) separated
+- Pipeline steps organized in `steps/`
+- Clear step naming
+- Modular architecture maintained
+
+### 📦 New Addition
+- Added `step_09_market_bias_engine.py`
+- Introduced market direction analysis
+- Pipeline upgraded from 8 → 9 steps
+
+### 🏗️ Smart Import Handling
+```python
+sys.path.insert(0, str(Path(__file__).parent.parent))
+```
+
+## 🚀 Quick Start
+
+### 1. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Setup Directories
+```bash
+cd scripts
+python setup.py
+```
+
+### 3. Run Pipeline
+```bash
+python run_pipeline.py
+```
+
+## 📊 Pipeline Steps
+
+| Step | Name | Input | Output |
+|------|------|-------|--------|
+| 01 | 6-Month Rollover Analysis | FO (6M) | 6M rollover metrics |
+| 02 | Cleanup Previous CM | CM (prev) | Previous spot prices |
+| 03 | Latest Rollover Analysis | FO (latest) | Monthly rollover metrics |
+| 04 | Cleanup Latest CM | CM (latest) | Latest spot prices |
+| 05 | Merge All Data | All outputs | Combined FO+CM dataset |
+| 06 | Build Sector Layout | Merged data | Sector layout CSV |
+| 07 | Build Sector Master | Config | Sector master Excel |
+| 08 | Place into Sectors | Merged + Sectors | Final dataset |
+| 09 | Market Bias Engine | Final dataset | Market direction |
+
+## 🧠 Step 09 — Market Bias Engine
+
+Uses index data:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+
+Calculates:
+- Price change
+- Rollover strength
+- Futures basis
+
+Output example:
+```
+BANKNIFTY → STRONG BULLISH
+NIFTY     → BULLISH
+FINNIFTY  → NEUTRAL
+
+FINAL MARKET → BULLISH TREND
+```
+
+Output file:
+```
+data/processed/merged/market_bias.csv
+```
+
+## 📋 Core Components
+
+### config.py
+```python
+RAW_PATHS = {...}
+PROCESSED_PATHS = {...}
+OUTPUT_FILES = {...}
+
+FULL_SECTORIAL_MAP = {...}
+
+SYMBOL_RENAME_MAP = {...}
+SYMBOL_TO_SECTOR_MAP = {...}
+```
+
+### utils.py
+```
+normalize_columns()
+normalize_symbols()
+detect_column()
+calculate_rollover_oi()
+calculate_rollover_cost()
+ensure_paths()
+parse_edates()
+convert_to_numeric()
+```
+
+### run_pipeline.py
+- Runs all 9 steps sequentially
+- Stops on failure
+- Logs execution
+- Shows summary
+
+## 🧪 Running Individual Steps
+
+```bash
+cd scripts
+
+python steps/step_01_sixmonth_rollover_analysis.py
+python steps/step_09_market_bias_engine.py
+```
+
+## 📈 Output Files
+
+| File | Purpose |
+|------|--------|
+| six_month_Avg_rollover_and_rollovercost.csv | 6M metrics |
+| monthly_rollover_and_rollcost.csv | Latest metrics |
+| eq_spot_standard.csv | Latest spot |
+| eq_spot_previous_standard.csv | Previous spot |
+| final_fo_oi_rollover_standard.csv | Merged dataset |
+| final_fo_with_sector_placed.csv | Final dataset |
+| market_bias.csv | Market direction |
+
+## 🔍 Logging Output
+
+```
+🚀 STARTING PIPELINE
+▶ STEP 01 ...
+...
+▶ STEP 09 Market Bias Engine
+🎯 No failures detected
+🎉 PIPELINE COMPLETED SUCCESSFULLY
+```
+
+## 📝 Key Features
+
+- Centralized configuration
+- Modular pipeline
+- Smart column detection
+- Sector classification
+- Market bias detection
+- Production ready
+
+## 🐛 Troubleshooting
+
+Module error:
+```bash
+pip install -r requirements.txt
+```
+
+Missing files:
+- Check raw folders
+- Run setup.py
+
+Column issues:
+- Update config.py
+
+## 📌 Status
+
+```
+Steps Completed → 9/9
+System Status   → Stable
+Market Engine   → Active
+```
+
+## 📄 License
+
+Internal use only
+
+---
+
+Pipeline Version: 3.0  
+Last Updated: March 2026  
+Status: Production Ready

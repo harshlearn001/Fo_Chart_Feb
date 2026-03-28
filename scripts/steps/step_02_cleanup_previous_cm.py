@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 """
-STEP 02 — PREVIOUS CM (FORCED MA HISTORICAL VERSION)
+STEP 02 — PREVIOUS CM + INDEX (FINAL STABLE VERSION)
 
 ✔ Loads BhavCopy
-✔ Forces MA historical index only
-✔ Ignores any indices_ohlc files
-✔ Prints debug value
-✔ Guarantees no zero PCT bug
+✔ Uses processed PD index file
+✔ No MA dependency
+✔ No zero PCT bug
+✔ Pipeline-safe
 """
 
 import sys
@@ -39,17 +39,24 @@ ensure_paths(OUT_DIR)
 files = handle_missing_files(RAW_DIR, "BhavCopy_NSE_CM_*.csv")
 
 if not files:
-    raise FileNotFoundError("No CM file found in previous month folder")
+    raise FileNotFoundError("❌ No CM file found")
 
 cm_file = files[0]
-logger.info(f"Loading CM file: {cm_file.name}")
+logger.info(f"📄 Loading CM file: {cm_file.name}")
 
 df = pd.read_csv(cm_file)
 df = df[(df["Sgmt"] == "CM") & (df["SctySrs"] == "EQ")].copy()
 
-spot_col = "ClsPric" if "ClsPric" in df.columns else "ClsPricRs"
+# detect close column
+if "ClsPric" in df.columns:
+    spot_col = "ClsPric"
+elif "ClsPricRs" in df.columns:
+    spot_col = "ClsPricRs"
+else:
+    raise ValueError("❌ Closing price column not found")
 
 df = df[["TradDt", "TckrSymb", spot_col]]
+
 df = df.rename(columns={
     "TckrSymb": "SYMBOL",
     spot_col: "PREV_SPOT_CLOSE"
@@ -60,36 +67,26 @@ df = parse_edates(df, "TradDt")
 df = convert_to_numeric(df, ["PREV_SPOT_CLOSE"])
 
 # =========================================================
-# FORCE LOAD MA FILE ONLY
+# LOAD INDEX FROM PD PIPELINE (FINAL FIX)
 # =========================================================
-ma_files = list(Path(RAW_DIR).glob("MA*.csv"))
 
-if not ma_files:
-    raise FileNotFoundError("MA historical index file not found")
+index_file = Path(r"H:\Fo_Chart_Feb\data\processed\cm\previous_cm_index.csv")
 
-ma_file = ma_files[0]
-logger.info(f"Using MA file: {ma_file.name}")
+if not index_file.exists():
+    raise FileNotFoundError(f"❌ Processed index file not found: {index_file}")
 
-ma = pd.read_csv(ma_file, skiprows=8, engine="python")
-ma.columns = ma.columns.str.strip()
+logger.info(f"📊 Loading index file: {index_file.name}")
 
-ma = ma[["INDEX", "CLOSE"]].dropna()
+idx = pd.read_csv(index_file)
+idx.columns = idx.columns.str.strip().str.upper()
 
-INDEX_MAP = {
-    "Nifty 50": "NIFTY",
-    "NIFTY MIDCAP 150": "MIDCPNIFTY",
-    "Nifty FinSrv25 50": "FINNIFTY",
-    "NIFTY BANK": "BANKNIFTY"
-}
+# rename to match CM structure
+idx = idx.rename(columns={
+    "DATE": "TradDt",
+    "CLOSE": "PREV_SPOT_CLOSE"
+})
 
-ma["SYMBOL"] = ma["INDEX"].map(INDEX_MAP)
-ma = ma.dropna(subset=["SYMBOL"])
-
-cm_date = cm_file.name.split("_")[6]
-ma["TradDt"] = pd.to_datetime(cm_date, format="%Y%m%d")
-ma = ma.rename(columns={"CLOSE": "PREV_SPOT_CLOSE"})
-
-idx = ma[["TradDt", "SYMBOL", "PREV_SPOT_CLOSE"]]
+idx = idx[["TradDt", "SYMBOL", "PREV_SPOT_CLOSE"]]
 
 idx = normalize_symbols(idx)
 idx = parse_edates(idx, "TradDt")
@@ -97,19 +94,23 @@ idx = convert_to_numeric(idx, ["PREV_SPOT_CLOSE"])
 
 df = pd.concat([df, idx], ignore_index=True)
 
-logger.info("📊 MA historical index merged")
+logger.info("✅ INDEX MERGED (PD SYSTEM)")
 
 # =========================================================
-# SAVE
+# SAVE FINAL
 # =========================================================
+
 df = df.dropna(subset=["SYMBOL", "PREV_SPOT_CLOSE"])
+df = df.sort_values(["TradDt", "SYMBOL"]).reset_index(drop=True)
+
 df.to_csv(OUT_FILE, index=False)
 
-logger.info("✅ STEP 02 COMPLETE")
+logger.info("🔥 STEP 02 COMPLETE")
+logger.info(df.head())
 
 # =========================================================
 # DEBUG CHECK
 # =========================================================
-print("\n===== DEBUG NIFTY VALUE SAVED =====")
+print("\n===== DEBUG NIFTY VALUE =====")
 print(df[df["SYMBOL"] == "NIFTY"])
-print("===================================\n")
+print("=============================\n")

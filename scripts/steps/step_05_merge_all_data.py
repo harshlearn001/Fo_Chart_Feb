@@ -2,123 +2,92 @@
 # -*- coding: utf-8 -*-
 
 """
-STEP 02 | PREVIOUS MONTH CM + INDEX (FINAL MASTER FIX)
+STEP 05 — MERGE ALL DATA (FINAL)
 
-✔ Loads previous CM
-✔ Loads matching index file (same date)
-✔ Fixes zero PCT problem
-✔ Production safe
+✔ Merge:
+    - Previous CM
+    - Latest CM
+    - 6M rollover
+    - Latest rollover
+✔ Create final dataset
+✔ Save final_fo_oi_rollover_standard.csv
 """
 
 import sys
 from pathlib import Path
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pandas as pd
-from config import RAW_PATHS, OUTPUT_FILES, setup_logging
-from utils import (
-    normalize_symbols,
-    parse_edates,
-    convert_to_numeric,
-    handle_missing_files,
-    ensure_paths
-)
+from config import OUTPUT_FILES, setup_logging
 
 logger = setup_logging(__name__)
 
-RAW_DIR = RAW_PATHS["cm_previous_month"]
-OUT_DIR = OUTPUT_FILES["previous_cm_clean"].parent
-OUT_FILE = OUTPUT_FILES["previous_cm_clean"]
+def main():
 
-ensure_paths(OUT_DIR)
+    logger.info("📊 STEP 05 - MERGING ALL DATA")
 
-# =========================================================
-# LOAD PREVIOUS CM
-# =========================================================
+    # ============================================
+    # LOAD FILES
+    # ============================================
 
-files = handle_missing_files(RAW_DIR, "BhavCopy_NSE_CM_*.csv")
+    prev_cm = pd.read_csv(OUTPUT_FILES["previous_cm_clean"])
+    latest_cm = pd.read_csv(OUTPUT_FILES["latest_cm_clean"])
 
-if not files:
-    raise FileNotFoundError("No previous CM file found")
+    sixm = pd.read_csv(OUTPUT_FILES["six_month_avg"])
+    latest = pd.read_csv(OUTPUT_FILES["latest_month_avg"])
 
-logger.info(f"Loading CM file: {files[0].name}")
+    # ============================================
+    # RENAME COLUMNS
+    # ============================================
 
-df = pd.read_csv(files[0])
-df = df[(df["Sgmt"] == "CM") & (df["SctySrs"] == "EQ")].copy()
-
-# Detect close column
-if "ClsPric" in df.columns:
-    spot_col = "ClsPric"
-elif "ClsPricRs" in df.columns:
-    spot_col = "ClsPricRs"
-else:
-    raise ValueError("Closing price column not found")
-
-df = df[["TradDt", "TckrSymb", spot_col]]
-df = df.rename(columns={
-    "TckrSymb": "SYMBOL",
-    spot_col: "PREV_SPOT_CLOSE"
-})
-
-df = normalize_symbols(df)
-df = parse_edates(df, "TradDt")
-df = convert_to_numeric(df, ["PREV_SPOT_CLOSE"])
-
-# =========================================================
-# LOAD MATCHING INDEX FILE (STRICT DATE MATCH)
-# =========================================================
-
-cm_filename = files[0].name
-parts = cm_filename.split("_")
-
-# Example:
-# BhavCopy_NSE_CM_0_0_0_20260127_F_0000.csv
-cm_date = parts[6]
-
-logger.info(f"Detected CM date: {cm_date}")
-
-index_file = Path(RAW_DIR) / f"indices_ohlc_eod_{cm_date}.csv"
-
-if index_file.exists():
-
-    logger.info(f"Loading index file: {index_file.name}")
-    idx = pd.read_csv(index_file)
-
-    INDEX_MAP = {
-        "NIFTY 50": "NIFTY",
-        "NIFTY BANK": "BANKNIFTY",
-        "NIFTY NEXT 50": "NIFTYNXT50",
-        "NIFTY FINANCIAL SERVICES": "FINNIFTY",
-        "NIFTY MIDCAP SELECT": "MIDCPNIFTY",
-        "INDIA VIX": "INDIAVIX"
-    }
-
-    idx["SYMBOL"] = idx["INDEX_NAME"].map(INDEX_MAP)
-    idx = idx.dropna(subset=["SYMBOL"])
-
-    idx = idx.rename(columns={
-        "CLOSE": "PREV_SPOT_CLOSE",
-        "TRADE_DATE": "TradDt"
+    latest = latest.rename(columns={
+        "FUT_NEXT_PRICE": "FUTURE_PRICE",
+        "ROLL_COST_PCT_M": "ROLLOVER_COST_LATEST",
+        "ROLL_OI_PCT_M": "ROLLOVER_OI_LATEST"
     })
 
-    idx = idx[["TradDt", "SYMBOL", "PREV_SPOT_CLOSE"]]
-    idx = normalize_symbols(idx)
-    idx = parse_edates(idx, "TradDt")
-    idx = convert_to_numeric(idx, ["PREV_SPOT_CLOSE"])
+    sixm = sixm.rename(columns={
+        "ROLL_COST_PCT_6M": "ROLLOVER_COST_6M_AVG",
+        "ROLL_OI_PCT_6M": "ROLLOVER_OI_6M_AVG"
+    })
 
-    df = pd.concat([df, idx], ignore_index=True)
-    logger.info("📊 Index merged SUCCESS")
+    # ============================================
+    # MERGE DATA
+    # ============================================
 
-else:
-    logger.error(f"❌ INDEX FILE NOT FOUND: {index_file}")
+    df = latest.merge(prev_cm, on="SYMBOL", how="left")
+    df = df.merge(latest_cm, on="SYMBOL", how="left")
+    df = df.merge(sixm, on="SYMBOL", how="left")
 
-# =========================================================
-# SAVE FINAL
-# =========================================================
+    # ============================================
+    # CALCULATIONS
+    # ============================================
 
-df = df.dropna(subset=["SYMBOL", "PREV_SPOT_CLOSE"])
-df.to_csv(OUT_FILE, index=False)
+    df["SPOT_CLOSE"] = df["SPOT_CLOSE"]
+    df["PCT_CHANGE"] = ((df["SPOT_CLOSE"] - df["PREV_SPOT_CLOSE"]) / df["PREV_SPOT_CLOSE"]) * 100
 
-logger.info("✅ PREVIOUS CM READY")
-logger.info(df.head())
+    df["BASIS"] = df["FUTURE_PRICE"] - df["SPOT_CLOSE"]
+
+    df["DIFF"] = df["ROLLOVER_OI_LATEST"] - df["ROLLOVER_OI_6M_AVG"]
+
+    # ============================================
+    # CLEAN
+    # ============================================
+
+    df = df.fillna(0)
+
+    # ============================================
+    # SAVE FINAL
+    # ============================================
+
+    out_file = OUTPUT_FILES["merged_fo_cm"]
+
+    df.to_csv(out_file, index=False)
+
+    logger.info("🔥 FINAL MERGED FILE READY")
+    logger.info(f"📁 Saved → {out_file}")
+    logger.info(df.head())
+
+
+if __name__ == "__main__":
+    main()

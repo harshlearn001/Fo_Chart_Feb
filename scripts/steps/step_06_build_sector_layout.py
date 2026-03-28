@@ -3,7 +3,7 @@
 
 """
 STEP 06
-Build Final Excel Layout Like Screenshot
+Build Final Excel Layout (Production Safe)
 """
 
 import sys
@@ -21,7 +21,25 @@ def main():
 
     logger.info("📊 STEP 06 - BUILDING SECTOR LAYOUT")
 
-    df = pd.read_csv(OUTPUT_FILES["merged_fo_cm"])
+    input_file = OUTPUT_FILES["merged_fo_cm"]
+
+    # ======================================================
+    # CHECK INPUT FILE
+    # ======================================================
+
+    if not Path(input_file).exists():
+        raise FileNotFoundError(f"❌ Missing merged file: {input_file}")
+
+    df = pd.read_csv(input_file)
+
+    if df.empty:
+        raise ValueError("❌ Input dataframe is empty")
+
+    # ======================================================
+    # CLEAN SYMBOL
+    # ======================================================
+
+    df["SYMBOL"] = df["SYMBOL"].astype(str).str.upper().str.strip()
 
     # ======================================================
     # ADD SECTOR + MACRO
@@ -35,17 +53,43 @@ def main():
     )
 
     # ======================================================
+    # ENSURE REQUIRED COLUMNS
+    # ======================================================
+
+    required_cols = [
+        "SPOT_CLOSE",
+        "PCT_CHANGE",
+        "FUTURE_PRICE",
+        "BASIS",
+        "ROLLOVER_OI_LATEST",
+        "ROLLOVER_OI_6M_AVG",
+        "ROLLOVER_COST_LATEST",
+        "ROLLOVER_COST_6M_AVG",
+        "DIFF",
+    ]
+
+    for col in required_cols:
+        if col not in df.columns:
+            logger.warning(f"⚠ Missing column: {col}")
+            df[col] = 0
+
+    # ======================================================
+    # TYPE FIX (IMPORTANT)
+    # ======================================================
+
+    for col in required_cols:
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+    # ======================================================
     # RANK WITHIN SECTOR
     # ======================================================
 
-    df["RANK"] = (
-        df.sort_values("DIFF", ascending=False)
-        .groupby("SECTOR")
-        .cumcount() + 1
-    )
+    df = df.sort_values("DIFF", ascending=False)
+
+    df["RANK"] = df.groupby("SECTOR").cumcount() + 1
 
     # ======================================================
-    # SELECT COLUMNS (LIKE IMAGE)
+    # SELECT COLUMNS
     # ======================================================
 
     final_cols = [
@@ -66,7 +110,7 @@ def main():
 
     df_final = df[final_cols].sort_values(
         ["MACRO", "SECTOR", "RANK"]
-    )
+    ).reset_index(drop=True)
 
     # ======================================================
     # SAVE CSV
@@ -75,13 +119,15 @@ def main():
     df_final.to_csv(OUTPUT_FILES["sector_layout"], index=False)
 
     # ======================================================
-    # ALSO SAVE EXCEL VERSION
+    # SAVE EXCEL
     # ======================================================
 
     excel_path = OUTPUT_FILES["sector_layout"].with_suffix(".xlsx")
     df_final.to_excel(excel_path, index=False)
 
     logger.info("✅ STEP 06 COMPLETED")
+    logger.info(f"📁 Saved CSV → {OUTPUT_FILES['sector_layout']}")
+    logger.info(f"📁 Saved Excel → {excel_path}")
 
 
 if __name__ == "__main__":
