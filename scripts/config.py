@@ -26,7 +26,7 @@ RAW_PATHS = {
     "cm_latest_month": BASE_DIR / "data/raw/cm_latest_month",
     "cm_previous_month": BASE_DIR / "data/raw/cm_previous_month",
     # Raw indices files (market watch / indices CSVs)
-    "inices": BASE_DIR / "data/raw/Inices",
+    "indices": BASE_DIR / "data/raw/indices",
 }
 
 PROCESSED_PATHS = {
@@ -305,9 +305,9 @@ SYMBOL_RENAME_MAP = {
     "PHOENIXL": "PHOENIXLTD",
     "UNO MINDA": "UNOMINDA",
     "LTI": "LTIM",
+    "LTM": "LTIM",   # ✅ FINAL FIX
     "MCDOWELL": "MCDOWELL-N",
 }
-
 # =================================================
 # COLUMN DETECTION CANDIDATES
 # =================================================

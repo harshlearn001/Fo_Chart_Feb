@@ -17,7 +17,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from config import OUTPUT_FILES, setup_logging
+from config import OUTPUT_FILES, setup_logging, SYMBOL_RENAME_MAP
 
 logger = setup_logging(__name__)
 
@@ -35,11 +35,14 @@ def main():
     logger.info(f"Loaded {len(fo)} rows from FO file")
     logger.info(f"Loaded {len(sector)} sector mappings")
 
-    # ======================================================
-    # CLEAN SYMBOL
-    # ======================================================
+# ======================================================
+# CLEAN SYMBOL
+# ======================================================
     fo["SYMBOL"] = fo["SYMBOL"].astype(str).str.upper().str.strip()
     sector["SYMBOL"] = sector["SYMBOL"].astype(str).str.upper().str.strip()
+
+    # 🔥 APPLY SYMBOL RENAME MAP (CRITICAL FIX)
+    fo["SYMBOL"] = fo["SYMBOL"].replace(SYMBOL_RENAME_MAP)
 
     # ======================================================
     # MERGE SECTOR MAP

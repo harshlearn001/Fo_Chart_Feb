@@ -22,7 +22,13 @@ STEPS_DIR = SCRIPT_DIR / "steps"
 
 STEPS = [
     ("step_01_sixmonth_rollover_analysis.py", "6-Month Rollover Analysis"),
+
+    # ✅ THIS MUST COME FIRST
+    ("step_02a_extract_prev_cm_index.py", "Extract Previous Month Index"),
+
+    # ✅ THEN THIS
     ("step_02_cleanup_previous_cm.py", "Clean Previous Month CM Data"),
+
     ("step_03_latest_rollover_analysis.py", "Latest Month Rollover Analysis"),
     ("step_04a_extract_latest_cm_index.py", "Extract Latest Month Index"),
     ("step_04_cleanup_latest_cm.py", "Clean Latest Month CM Data"),
@@ -31,7 +37,6 @@ STEPS = [
     ("step_07_build_sector_master.py", "Build Sector Master Excel"),
     ("step_08_place_into_sectors.py", "Place Stocks into Sectors"),
 ]
-
 
 def run_script(script_name: str, description: str) -> bool:
     """Run a single script.
