@@ -88,7 +88,7 @@ FULL_SECTORIAL_MAP = {
         },
 
         "FIN_SERV_AMC_WEALTH": {
-            "HDFCAMC","360ONE","KFINTECH","CAMS","ANGELONE","MFSL","NUVAMA"
+            "HDFCAMC","360ONE","KFINTECH","CAMS","ANGELONE","MFSL","NUVAMA","MOTILALOFS","NAM-INDIA"
         },
 
         "FIN_SERV_HOLDING": {
@@ -114,7 +114,7 @@ FULL_SECTORIAL_MAP = {
             "ITC","HINDUNILVR","NESTLEIND","BRITANNIA","TATACONSUM",
             "DABUR","GODREJCP","MARICO","VBL","EMAMILTD",
             "RADICO","UBL","UNITDSPR","COLPAL",
-            "PAGEIND","JUBLFOOD"
+            "PAGEIND","JUBLFOOD" , "GODFRYPHLP"
         },
 
         "PHARMA": {
@@ -168,12 +168,12 @@ FULL_SECTORIAL_MAP = {
             "MARUTI","TATAMOTORS","M&M","BAJAJ-AUTO","HEROMOTOCO","EICHERMOT",
             "TVSMOTOR","ASHOKLEY","SONACOMS","MOTHERSON","UNOMINDA",
             "ENDURANCE","BOSCHLTD","EXIDEIND","BALKRISIND",
-            "MRF","CEAT","JKTYRE","BHARATFORG","TIINDIA"
+            "MRF","CEAT","JKTYRE","BHARATFORG","TIINDIA","HYUNDAI"
         },
 
         "INDUSTRIALS": {
             "ABB","CGPOWER","CUMMINSIND","KAYNES","KEI",
-            "SIEMENS","SUPREMEIND"
+            "SIEMENS","SUPREMEIND","COCHINSHIP","FORCEMOT"
         },
 
         "ELECTRICAL": {
@@ -219,7 +219,7 @@ FULL_SECTORIAL_MAP = {
     "HIGH_BETA": {
 
         "FIN_SERV_PLATFORM": {
-            "PAYTM","POLICYBZR","JIOFIN"
+            "PAYTM","POLICYBZR","JIOFIN","VMM"
         },
 
         "FIN_SERV_CONSUMER_CREDIT": {
